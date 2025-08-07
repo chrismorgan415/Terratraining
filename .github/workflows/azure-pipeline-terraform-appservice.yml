@@ -1,0 +1,75 @@
+
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  TF_VERSION: '1.6.0'
+  AZURE_SERVICE_CONNECTION: 'AzureServiceConnectionName'  # Replace with your actual service connection name
+  PACKAGE_PATH: '$(System.DefaultWorkingDirectory)/drop/app.zip'
+
+stages:
+- stage: TerraformProvision
+  jobs:
+  - job: TerraformJob
+    displayName: 'Terraform Infrastructure Provisioning'
+    steps:
+    - task: UseTerraform@0
+      inputs:
+        terraformVersion: $(TF_VERSION)
+
+    - script: terraform init
+      displayName: 'Terraform Init'
+
+    - script: terraform fmt -check
+      displayName: 'Terraform Format Check'
+
+    - script: terraform validate
+      displayName: 'Terraform Validate'
+
+    - script: terraform plan -out=tfplan
+      displayName: 'Terraform Plan'
+
+    - script: terraform apply -auto-approve tfplan
+      displayName: 'Terraform Apply'
+
+- stage: BuildAndDeploy
+  dependsOn: TerraformProvision
+  jobs:
+  - job: BuildJob
+    displayName: 'Build and Deploy Application'
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.x'
+      displayName: 'Install Node.js'
+
+    - script: |
+        npm install
+        npm run build
+      displayName: 'Build Application'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
+        replaceExistingArchive: true
+      displayName: 'Archive Application'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: 'drop'
+      displayName: 'Publish Build Artifacts'
+
+    - task: AzureWebApp@1
+      inputs:
+        azureSubscription: $(AZURE_SERVICE_CONNECTION)
+        appType: 'webApp'
+        appName: 'YourAppServiceName'  # Replace with your Azure App Service name
+        package: $(PACKAGE_PATH)
+      displayName: 'Deploy to Azure App Service'
