@@ -7,7 +7,7 @@ pool:
 
 variables:
   TF_VERSION: '1.6.0'
-  AZURE_SERVICE_CONNECTION: 'AzureServiceConnectionName'  # Replace with your actual service connection name
+  AZURE_SERVICE_CONNECTION: 'AzureServiceConnectionName'  
   PACKAGE_PATH: '$(System.DefaultWorkingDirectory)/drop/app.zip'
 
 stages:
@@ -70,6 +70,6 @@ stages:
       inputs:
         azureSubscription: $(AZURE_SERVICE_CONNECTION)
         appType: 'webApp'
-        appName: 'YourAppServiceName'  # Replace with your Azure App Service name
+        appName: 'YourAppServiceName'  
         package: $(PACKAGE_PATH)
       displayName: 'Deploy to Azure App Service'
